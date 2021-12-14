@@ -19,7 +19,7 @@ var debug bool
 var timeoutMS int = 2000
 var parallelism int = 1000
 var portSelection string
-var scanType = "connect"
+// var scanType = "connect"
 var hideUnavailableHosts bool
 var versionRequested bool
 
@@ -64,35 +64,34 @@ func Scan(scan_type string, portSelection string, host string) ([]string, error)
 		cancel()
 	}()
 
-	startTime := time.Now()
-
 	for _, target := range args {
 
 		targetIterator := fscan.NewTargetIterator(target)
 
 		// creating scanner
-		scanner, err := createScanner(targetIterator, scanType, time.Millisecond*time.Duration(timeoutMS), parallelism)
+		scanner, err := createScanner(targetIterator, scan_type, time.Millisecond*time.Duration(timeoutMS), parallelism)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			return nil, err
 		}
 
 		log.Debugf("Starting scanner...")
 		if err := scanner.Start(); err != nil {
 			fmt.Println(err)
-			os.Exit(1)
+			return nil, err
 		}
 
 		log.Debugf("Scanning target %s...", target)
 
 		results, err := scanner.Scan(ctx, ports)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			return nil, err
 		}
 		for _, result := range results {
 			if !hideUnavailableHosts || result.IsHostUp() {
-				res, _ := scanResultToJSON(result)
+				res, err := scanResultToJSON(result)
+				if err != nil {
+					return nil, err
+				}
 				final_res = append(final_res, res)
 			}
 		}
