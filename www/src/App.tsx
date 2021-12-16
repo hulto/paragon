@@ -21,7 +21,8 @@ import {
   XProfileView,
   XRunView,
   XTargetView,
-  XTaskView
+  XTaskView,
+  XTerminalView
 } from "./views";
 import XEventFeedView from "./views/XEventFeedView";
 
@@ -152,6 +153,12 @@ const App = () => {
               path="/targets/:id"
               padded
               view={XTargetView}
+            />
+            <XView
+              authorized={authz}
+              path="/terminal/:id"
+              padded
+              view={XTerminalView}
             />
             <XView
               authorized={authz}

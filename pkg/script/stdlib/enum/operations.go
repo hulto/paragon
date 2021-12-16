@@ -15,14 +15,13 @@ import (
     log "github.com/sirupsen/logrus"
 )
 
-var debug bool
+var debug bool = true
 var timeoutMS int = 2000
 var parallelism int = 1000
 var portSelection string
 // var scanType = "connect"
 var hideUnavailableHosts bool
 var versionRequested bool
-
 
 func scan(parser script.ArgParser) (script.Retval, error) {
 	scan_type, err := parser.GetString(0)
@@ -41,7 +40,6 @@ func scan(parser script.ArgParser) (script.Retval, error) {
 	retVal, retErr := Scan(scan_type, ports, host)
 	return script.WithError(retVal, retErr), nil
 }
-
 
 func Scan(scan_type string, portSelection string, host string) ([]string, error) {
 	var args [1]string
@@ -71,27 +69,24 @@ func Scan(scan_type string, portSelection string, host string) ([]string, error)
 		// creating scanner
 		scanner, err := createScanner(targetIterator, scan_type, time.Millisecond*time.Duration(timeoutMS), parallelism)
 		if err != nil {
-			return nil, err
+			fmt.Println(err)
 		}
 
 		log.Debugf("Starting scanner...")
 		if err := scanner.Start(); err != nil {
 			fmt.Println(err)
-			return nil, err
 		}
 
 		log.Debugf("Scanning target %s...", target)
 
 		results, err := scanner.Scan(ctx, ports)
 		if err != nil {
-			return nil, err
+			fmt.Println(err)
+			os.Exit(1)
 		}
 		for _, result := range results {
 			if !hideUnavailableHosts || result.IsHostUp() {
-				res, err := scanResultToJSON(result)
-				if err != nil {
-					return nil, err
-				}
+				res, _ := scanResultToJSON(result)
 				final_res = append(final_res, res)
 			}
 		}

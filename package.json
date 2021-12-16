@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "termy-the-terminal": "^1.3.0"
+  }
+}

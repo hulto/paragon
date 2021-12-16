@@ -6,36 +6,37 @@ package c2_test
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	ent "github.com/kcarretto/paragon/ent"
 	models "github.com/kcarretto/paragon/graphql/models"
-	reflect "reflect"
 )
 
-// MockTeamserver is a mock of Teamserver interface
+// MockTeamserver is a mock of Teamserver interface.
 type MockTeamserver struct {
 	ctrl     *gomock.Controller
 	recorder *MockTeamserverMockRecorder
 }
 
-// MockTeamserverMockRecorder is the mock recorder for MockTeamserver
+// MockTeamserverMockRecorder is the mock recorder for MockTeamserver.
 type MockTeamserverMockRecorder struct {
 	mock *MockTeamserver
 }
 
-// NewMockTeamserver creates a new mock instance
+// NewMockTeamserver creates a new mock instance.
 func NewMockTeamserver(ctrl *gomock.Controller) *MockTeamserver {
 	mock := &MockTeamserver{ctrl: ctrl}
 	mock.recorder = &MockTeamserverMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTeamserver) EXPECT() *MockTeamserverMockRecorder {
 	return m.recorder
 }
 
-// ClaimTasks mocks base method
+// ClaimTasks mocks base method.
 func (m *MockTeamserver) ClaimTasks(arg0 context.Context, arg1 models.ClaimTasksRequest) ([]*ent.Task, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ClaimTasks", arg0, arg1)
@@ -44,13 +45,13 @@ func (m *MockTeamserver) ClaimTasks(arg0 context.Context, arg1 models.ClaimTasks
 	return ret0, ret1
 }
 
-// ClaimTasks indicates an expected call of ClaimTasks
+// ClaimTasks indicates an expected call of ClaimTasks.
 func (mr *MockTeamserverMockRecorder) ClaimTasks(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClaimTasks", reflect.TypeOf((*MockTeamserver)(nil).ClaimTasks), arg0, arg1)
 }
 
-// SubmitTaskResult mocks base method
+// SubmitTaskResult mocks base method.
 func (m *MockTeamserver) SubmitTaskResult(arg0 context.Context, arg1 models.SubmitTaskResultRequest) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SubmitTaskResult", arg0, arg1)
@@ -58,7 +59,7 @@ func (m *MockTeamserver) SubmitTaskResult(arg0 context.Context, arg1 models.Subm
 	return ret0
 }
 
-// SubmitTaskResult indicates an expected call of SubmitTaskResult
+// SubmitTaskResult indicates an expected call of SubmitTaskResult.
 func (mr *MockTeamserverMockRecorder) SubmitTaskResult(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitTaskResult", reflect.TypeOf((*MockTeamserver)(nil).SubmitTaskResult), arg0, arg1)
