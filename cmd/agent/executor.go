@@ -10,10 +10,10 @@ import (
 	"github.com/kcarretto/paragon/pkg/script/stdlib/assert"
 	"github.com/kcarretto/paragon/pkg/script/stdlib/file"
 	"github.com/kcarretto/paragon/pkg/script/stdlib/http"
+	"github.com/kcarretto/paragon/pkg/script/stdlib/pivot"
 	"github.com/kcarretto/paragon/pkg/script/stdlib/process"
 	"github.com/kcarretto/paragon/pkg/script/stdlib/regex"
 	"github.com/kcarretto/paragon/pkg/script/stdlib/sys"
-	"github.com/kcarretto/paragon/pkg/script/stdlib/enum"
 )
 
 // Executor is responsible for executing tasks from the server.
@@ -31,8 +31,7 @@ func (exec Executor) ExecuteTask(ctx context.Context, output io.Writer, task *tr
 		regex.Include(),
 		process.Include(),
 		assert.Include(),
-		enum.Include(),
-
+		pivot.Include(),
 	)
 
 	return code.Exec(ctx)

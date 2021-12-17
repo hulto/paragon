@@ -16,6 +16,7 @@ import {
   XTaskCardDisplayType
 } from "../components/task";
 import { Target } from "../graphql/models";
+import { useEffect } from "react";
 
 export const TERMINAL_QUERY = gql`
   query Target($id: ID!) {
@@ -55,7 +56,7 @@ export const TERMINAL_QUERY = gql`
   }
 `;
 
-type TargetQueryResponse = {
+type TerminalQueryResponse = {
   target: Target;
 };
 
@@ -79,13 +80,13 @@ const XTerminalView = () => {
         credentials = []
       } = {}
     } = {}
-  } = useQuery<TargetQueryResponse>(TERMINAL_QUERY, {
+  } = useQuery<TerminalQueryResponse>(TERMINAL_QUERY, {
     variables: { id },
     pollInterval: 5000
   });
 
   const whenLoading = (
-    <XLoadingMessage title="Loading Target" msg="Fetching target info" />
+    <XLoadingMessage title="Loading Terminal" msg="Fetching target info" />
   );
   const whenFieldEmpty = <span>Unknown</span>;
   const whenNotSeen = <span>Never</span>;
@@ -97,7 +98,7 @@ const XTerminalView = () => {
 
       <XErrorMessage title="Error Loading Target" err={error} />
       <XBoundary boundary={whenLoading} show={!loading}>
-        <XTerminalShell></XTerminalShell>
+        {hostname && (<XTerminalShell t={hostname}></XTerminalShell>)}
       </XBoundary>
     </React.Fragment>
   );

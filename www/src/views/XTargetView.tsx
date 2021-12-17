@@ -94,7 +94,7 @@ const XTargetView = () => {
     <React.Fragment>
       <XTargetHeader name={name} tags={tags} lastSeen={lastSeen} />
 
-      <XErrorMessage title="Error Loading Target" err={error} />
+      <XErrorMessage title="Error Loading targets" err={error} />
       <XBoundary boundary={whenLoading} show={!loading}>
         <Button icon labelPosition='right' color="green" as={Link} to={"/terminal/" + id}>
           <Icon name="terminal"></Icon>

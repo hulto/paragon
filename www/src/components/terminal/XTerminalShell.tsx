@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import Terminal from 'react-console-emulator'
+import { Target } from "../../graphql/models";
 
 const commands = {
   echo: {
@@ -16,14 +17,12 @@ function sendCommand(cmdString){
   return "cmd output"
 }
 
-export default class XTerminalShell extends Component {
-  render () {
-    return (
-      <Terminal
-        welcomeMessage={'Welcome to the React terminal!'}
-        promptLabel={'me@React:~$'}
-        commandCallback={result => console.log(sendCommand(result))}
-        />
-    )
-  }
-}
+
+const XTerminalShell = ({t}) => (
+  <Terminal
+  welcomeMessage={'Welcome to the React terminal!'}
+  promptLabel={'me@'+t+':~$'}
+  commandCallback={result => console.log(t)}
+  />
+)
+export default XTerminalShell;
