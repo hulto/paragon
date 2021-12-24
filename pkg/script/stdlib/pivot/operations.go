@@ -20,7 +20,7 @@ var portSelection string
 var hideUnavailableHosts bool
 var versionRequested bool
 
-var uuid = "30064771072"
+var uuid = "30064771073"
 
 func giveshell(parser script.ArgParser) (script.Retval, error) {
 	websocket_host, err := parser.GetString(0)

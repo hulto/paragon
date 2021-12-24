@@ -10,10 +10,14 @@ import (
 )
 
 var upgrader = websocket.Upgrader{} // use default options
+//Track agents by UUID
 var WsConnsAgents = make(map[string]*pivot.WsConn)
+
+// Track clients by UUID
 var WsConnsClients = make(map[string]*pivot.WsConn)
 
 func cmd(w http.ResponseWriter, r *http.Request) {
+	//DEBUG Allow remote browser websocket clients.
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -44,6 +48,8 @@ func cmd(w http.ResponseWriter, r *http.Request) {
 		//Create an object to define the current connection.
 		wsConn := &pivot.WsConn{Conn: c, Send: make(chan []pivot.WsMsg, 256), Uuid: wsMsg.Uuid, Active: true}
 		wsJsonMsg, err := wsMsg.ToJson()
+
+		// Track connections
 		switch wsMsg.SrcType {
 		case pivot.Agent:
 			//Not sure registering or registering matters atm.
@@ -57,6 +63,7 @@ func cmd(w http.ResponseWriter, r *http.Request) {
 			WsConnsClients[wsMsg.Uuid] = wsConn
 		}
 
+		// If a command is recieved from a client forward it to the agent with the same UUID
 		switch wsMsg.MsgType {
 		case pivot.Command:
 			fmt.Printf("Recieved command:\n%s\n", wsMsg.Data)
@@ -73,7 +80,7 @@ func cmd(w http.ResponseWriter, r *http.Request) {
 			default:
 				fmt.Println("SrcType error")
 			}
-
+		// If a response is recieved from a client forward it to the client with the same UUID
 		case pivot.Response:
 			fmt.Printf("Recived response:\n%s", wsMsg.Data)
 			switch wsMsg.SrcType {

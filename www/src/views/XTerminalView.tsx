@@ -17,6 +17,8 @@ import {
 } from "../components/task";
 import { Target } from "../graphql/models";
 import { useEffect } from "react";
+import {WebsocketBuilder} from 'websocket-ts';
+
 
 export const TERMINAL_QUERY = gql`
   query Target($id: ID!) {
@@ -92,13 +94,49 @@ const XTerminalView = () => {
   const whenNotSeen = <span>Never</span>;
   const whenTasksEmpty = <XNoTasksFound />;
 
+  const ws = new WebsocketBuilder('ws://localhost:9050/cmd')
+    .onOpen((i, ev) => { console.log("opened") })
+    .onClose((i, ev) => { console.log("closed") })
+    .onError((i, ev) => { console.log("error") })
+    .onMessage((i, ev) => { handleCommandOutput(ev) })
+    .onRetry((i, ev) => { console.log("retry") })
+    .build();
+
+  const formJsonMsg = (command) =>  {
+    var obj = {
+      Uuid: id, 
+      Data: command, 
+      MsgType: 1,
+      SrcType: 1
+    }
+    return JSON.stringify(obj)
+  }
+
+  const handleCommandInput = (command) => {
+    var jsonMsg = formJsonMsg(command);
+    console.log(jsonMsg);
+    ws.send(jsonMsg);
+    setCommandOutput("");
+
+  }
+
+  const [commandOutput, setCommandOutput] = React.useState("");
+  
+  const handleCommandOutput = (response) => {
+    // console.log(response.data)
+    let jsonObj: any = JSON.parse(response.data);
+    // console.log(jsonObj.Data)
+    setCommandOutput(jsonObj.Data);
+  }
+
+
   return (
     <React.Fragment>
       <XTargetHeader name={name} tags={tags} lastSeen={lastSeen} />
 
       <XErrorMessage title="Error Loading Target" err={error} />
       <XBoundary boundary={whenLoading} show={!loading}>
-        {hostname && (<XTerminalShell t={hostname}></XTerminalShell>)}
+        {hostname && (<XTerminalShell t={hostname} handleCallback={handleCommandInput} commandOutput={commandOutput}></XTerminalShell>)}
       </XBoundary>
     </React.Fragment>
   );
