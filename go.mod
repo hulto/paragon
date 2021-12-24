@@ -15,6 +15,7 @@ require (
 	github.com/golang/mock v1.3.1
 	github.com/google/skylark v0.0.0-20181101142754-a5f7082aabed
 	github.com/google/uuid v1.1.1
+	github.com/gorilla/websocket v1.4.0
 	github.com/liamg/furious v0.0.0-20191231090757-c295c872d6c1
 	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/nats-io/nats.go v1.9.1

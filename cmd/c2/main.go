@@ -8,7 +8,6 @@ import (
 	"github.com/kcarretto/paragon/graphql/models"
 	"github.com/kcarretto/paragon/pkg/agent/c2"
 	"github.com/kcarretto/paragon/pkg/agent/transport/http"
-
 	"go.uber.org/zap"
 )
 
@@ -51,6 +50,13 @@ func main() {
 	if url := os.Getenv("TEAMSERVER_URL"); url != "" {
 		teamserverURL = url
 	}
+
+	// Give shell callback
+	// wsrevshellURL := "ws://0.0.0.0:9095"
+	// if url := os.Getenv("WS_REV_SHELL_ADDR"); url != "" {
+	// 	wsrevshellURL = url
+	// }
+
 	graph := &graphql.Client{
 		Service: "pg-c2",
 		URL:     teamserverURL,
@@ -70,6 +76,9 @@ func main() {
 		Log:    logger.Named("transport.http"),
 		Server: srv,
 	}
+
+	//Launch rev shell web socket listener.
+	go http.ServeWebSocket()
 
 	if err := httpSvc.ListenAndServe(httpAddr); err != nil {
 		panic(err)
