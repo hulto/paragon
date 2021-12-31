@@ -78,7 +78,7 @@ func main() {
 	}
 
 	//Launch rev shell web socket listener.
-	go http.ServeWebSocket()
+	go http.ListenAndServeWS("0.0.0.0:4444", "0.0.0.0:9050")
 
 	if err := httpSvc.ListenAndServe(httpAddr); err != nil {
 		panic(err)

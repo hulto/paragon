@@ -1,110 +1,99 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/gorilla/websocket"
-	"github.com/kcarretto/paragon/pkg/script/stdlib/pivot"
+	// "github.com/urfave/cli/v2"
+
+	"github.com/kost/tty2web/backend/localcommand"
+	"github.com/kost/tty2web/server"
+	"github.com/kost/tty2web/utils"
 )
 
-var upgrader = websocket.Upgrader{} // use default options
-//Track agents by UUID
-var WsConnsAgents = make(map[string]*pivot.WsConn)
+func ListenAndServeWS(listenAddress string, serverAddress string) {
+	appOptions := &server.Options{}
+	if err := utils.ApplyDefaultValues(appOptions); err != nil {
+		log.Printf("Error applying default value: %v", err)
+		exit(err, 1)
+	}
+	backendOptions := &localcommand.Options{}
+	if err := utils.ApplyDefaultValues(backendOptions); err != nil {
+		log.Printf("Error applying backend default value: %v", err)
+		exit(err, 1)
+	}
 
-// Track clients by UUID
-var WsConnsClients = make(map[string]*pivot.WsConn)
+	appOptions.EnableBasicAuth = false     //c.IsSet("credential")
+	appOptions.EnableTLSClientAuth = false //c.IsSet("tls-ca-crt")
+	appOptions.PermitWrite = true
+	// appOptions.Connect = c2ip
+	appOptions.Listen = listenAddress //"0.0.0.0:4444"
+	appOptions.Server = serverAddress //"0.0.0.0:8080"
 
-func cmd(w http.ResponseWriter, r *http.Request) {
-	//DEBUG Allow remote browser websocket clients.
-	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-	c, err := upgrader.Upgrade(w, r, nil)
+	err := appOptions.Validate()
 	if err != nil {
-		log.Print("upgrade:", err)
-		return
-	}
-	defer c.Close()
-
-	// client := &Client{conn: c, send: make(chan []byte, 256), Uuid: "", Rxtx: ""}
-	// WsConns[client] = true
-	for {
-		fmt.Println(c.RemoteAddr())
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			log.Println("server.cmd ReadMessage:", err)
-			break
-		}
-
-		// Create a WebSocket message from thhe data recieved.
-		wsMsg := &pivot.WsMsg{}
-		err = pivot.WsMsgFromJson(string(message), wsMsg)
-		if err != nil {
-			log.Println("Error creating WsMsg from JSON:\n", err)
-		}
-
-		// fmt.Println(wsMsg.ToString())
-
-		//Create an object to define the current connection.
-		wsConn := &pivot.WsConn{Conn: c, Send: make(chan []pivot.WsMsg, 256), Uuid: wsMsg.Uuid, Active: true}
-		wsJsonMsg, err := wsMsg.ToJson()
-
-		// Track connections
-		switch wsMsg.SrcType {
-		case pivot.Agent:
-			//Not sure registering or registering matters atm.
-			// if wsConn, okay := WsConnsAgents[wsMsg.Uuid]; okay {
-			// 	fmt.Printf("Already registered agent %s", wsMsg.Uuid)
-			// } else {
-			// 	fmt.Printf("Registering agent %s", wsMsg.Uuid)
-			// }
-			WsConnsAgents[wsMsg.Uuid] = wsConn
-		case pivot.Client:
-			WsConnsClients[wsMsg.Uuid] = wsConn
-		}
-
-		// If a command is recieved from a client forward it to the agent with the same UUID
-		switch wsMsg.MsgType {
-		case pivot.Command:
-			fmt.Printf("Recieved command:\n%s\n", wsMsg.Data)
-			switch wsMsg.SrcType {
-			case pivot.Client:
-				// Chheck if agent is registered in connection list.
-				if wsConn, okay := WsConnsAgents[wsMsg.Uuid]; okay {
-					// Send Command to agent.
-					err = wsConn.Conn.WriteMessage(websocket.TextMessage, []byte(string(wsJsonMsg)))
-					if err != nil {
-						log.Printf("Error sending message back", err)
-					}
-				}
-			default:
-				fmt.Println("SrcType error")
-			}
-		// If a response is recieved from a client forward it to the client with the same UUID
-		case pivot.Response:
-			fmt.Printf("Recived response:\n%s", wsMsg.Data)
-			switch wsMsg.SrcType {
-			case pivot.Agent:
-				if wsConn, okay := WsConnsClients[wsMsg.Uuid]; okay {
-					fmt.Println("Here")
-					// Send Command to client.
-					err = wsConn.Conn.WriteMessage(websocket.TextMessage, []byte(string(wsJsonMsg)))
-					if err != nil {
-						log.Printf("Error sending message back", err)
-					}
-				}
-			default:
-				fmt.Println("SrcType error")
-			}
-
-		}
+		log.Printf("Error validating options: %v", err)
+		exit(err, 6)
 	}
 
+	if appOptions.Listen != "" {
+		log.Printf("Listening for reverse connection %s", appOptions.Listen)
+		go func() {
+			log.Fatal(listenForAgents(true, true, appOptions.Listen, appOptions.Server, appOptions.ListenCert, appOptions.Password))
+		}()
+		wait4Signals()
+	}
 }
 
-func ServeWebSocket() {
-	log.SetFlags(0)
-	log.Printf("Starting websocket")
-	http.HandleFunc("/cmd", cmd)
-	log.Fatal(http.ListenAndServe("0.0.0.0:9050", nil))
+func exit(err error, code int) {
+	if err != nil {
+		fmt.Println(err)
+	}
+	os.Exit(code)
+}
+
+func wait4Signals() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+	select {
+	case sig := <-c:
+		fmt.Printf("Got %s signal. Aborting...\n", sig)
+		os.Exit(1)
+	}
+}
+
+func waitSignals(errs chan error, cancel context.CancelFunc, gracefullCancel context.CancelFunc) error {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(
+		sigChan,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+
+	select {
+	case err := <-errs:
+		return err
+
+	case s := <-sigChan:
+		switch s {
+		case syscall.SIGINT:
+			gracefullCancel()
+			fmt.Println("C-C to force close")
+			select {
+			case err := <-errs:
+				return err
+			case <-sigChan:
+				fmt.Println("Force closing...")
+				cancel()
+				return <-errs
+			}
+		default:
+			cancel()
+			return <-errs
+		}
+	}
 }

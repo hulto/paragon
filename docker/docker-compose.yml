@@ -25,6 +25,7 @@ services:
       TEAMSERVER_URL: "http://paragon_teamserver_1/graphql"
     ports:
     - "127.0.0.1:9050:9050"
+    - "127.0.0.1:4444:4444"
 
 
   worker:
