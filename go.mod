@@ -4,11 +4,16 @@ go 1.13
 
 require (
 	github.com/99designs/gqlgen v0.10.2
+	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
 	github.com/blang/vfs v1.0.0
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
+	github.com/codegangsta/cli v1.22.5 // indirect
+	github.com/creack/pty v1.1.17 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1
+	github.com/elazarl/go-bindata-assetfs v1.0.1 // indirect
 	github.com/facebookincubator/ent v0.0.0-20200122095037-28b9ef193fb3
+	github.com/fatih/structs v1.1.0 // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/gogo/protobuf v1.3.1
@@ -16,6 +21,10 @@ require (
 	github.com/google/skylark v0.0.0-20181101142754-a5f7082aabed
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/websocket v1.4.0
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/hashicorp/yamux v0.0.0-20211028200310-0bc27b27de87 // indirect
+	github.com/kost/go-ntlmssp v0.0.0-20190601005913-a22bdd33b2a4 // indirect
+	github.com/kost/tty2web v2.2.0+incompatible // indirect
 	github.com/liamg/furious v0.0.0-20191231090757-c295c872d6c1
 	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/nats-io/nats.go v1.9.1
@@ -31,6 +40,7 @@ require (
 	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli v1.20.0
 	github.com/vektah/gqlparser v1.2.0
+	github.com/yudai/hcl v0.0.0-20151013225006-5fa2393b3552 // indirect
 	go.starlark.net v0.0.0-20191018214235-58de16fb0ee7
 	go.uber.org/atomic v1.4.0 // indirect
 	go.uber.org/multierr v1.2.0 // indirect
@@ -47,3 +57,5 @@ require (
 	google.golang.org/grpc v1.24.0 // indirect
 	gopkg.in/yaml.v2 v2.2.5 // indirect
 )
+
+replace github.com/codegangsta/cli v1.22.5 => github.com/urfave/cli v1.22.5

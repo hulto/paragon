@@ -105,7 +105,7 @@ const XTerminalView = () => {
   const formJsonMsg = (command) =>  {
     var obj = {
       Uuid: id, 
-      Data: command, 
+      Data: command.trim(), 
       MsgType: 1,
       SrcType: 1
     }
@@ -115,7 +115,7 @@ const XTerminalView = () => {
   const handleCommandInput = (command) => {
     var jsonMsg = formJsonMsg(command);
     console.log(jsonMsg);
-    ws.send(jsonMsg);
+    ws.send(jsonMsg.trim());
     setCommandOutput("");
 
   }

